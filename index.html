@@ -71,7 +71,7 @@
       document.getElementById('p-demo').append(table);
     }
 
-    function insertPatientConditions(conditions) {
+    function insertPatientConditions(conditions, bindSort) {
       const createRow = function (condtionName, conditionDescription, dateRecorded) {
         const name = condtionName + ', ' + conditionDescription;
         const moreInfo = "https://www.ncbi.nlm.nih.gov/pubmed/?term=" + condtionName;
@@ -105,7 +105,9 @@
 
       document.getElementById('p-conds').append(tbody);
 
-      makeConditionsSortable(conditions);
+      if (bindSort) {
+        makeConditionsSortable(conditions);
+      }
     }
 
     function makeConditionsSortable(conditions) {
@@ -126,7 +128,7 @@
           }
 
           document.querySelector('#p-conds tbody').remove();
-          insertPatientConditions(newConditions);
+          insertPatientConditions(newConditions, false);
         });
       });
 
@@ -149,7 +151,7 @@
         };
       });
 
-      insertPatientConditions(conditions);
+      insertPatientConditions(conditions, true);
     });
   })();
 </script>

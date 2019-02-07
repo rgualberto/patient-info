@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Patient Maladies</title>
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+
+    <style>
+      th { text-align: left; }
+      td { padding: 10px;}
+
+      .patient-conds th {
+        cursor: pointer;
+      }
+    </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="patient-demo" id="p-demo"></div>
+
+    <div class="patient-conds">
+      <table id="p-conds">
+        <thead>
+          <tr>
+            <th data-sort="condition">Condition</th>
+            <th data-sort="dateRecorded">Recorded</th>
+            <th data-sort="more-info">More Info</th>
+          </tr>
+        </thead>
+      </table>
+    </div>
+
+  </div>
+
+
+  <script src="./lodash.js"></script>
+  <script>
+  (function() {
+
+    function fetchData(action) {
+      const baseUrl = "https://fhir-open.sandboxcerner.com/dstu2/0b8a0111-e8e6-4c26-a91c-5069cbc6b1ca/";
+
+      return fetch(baseUrl + action, {
+              headers: {"Accept": "application/json+fhir, application/json"}
+            })
+            .then(function(response) {
+              return response.json();
+            });
+    }
+
+    function insertPatientInfo(patient) {
+      const createRow = function (fieldName, value) {
+        const row = document.createElement('tr');
+        const f = document.createElement('th');
+        const v = document.createElement('td');
+
+        f.innerText = fieldName;
+        v.innerText = value;
+
+        row.append(f);
+        row.append(v);
+
+        return row;
+      }
+
+      const table = document.createElement('table');
+      table.append(createRow('Patient Name', patient.name[0].text));
+      table.append(createRow('Patient Gender', patient.gender));
+      table.append(createRow('Patient DoB', patient.birthDate));
+
+      document.getElementById('p-demo').append(table);
+    }
+
+    function insertPatientConditions(conditions) {
+      const createRow = function (condtionName, conditionDescription, dateRecorded) {
+        const name = condtionName + ', ' + conditionDescription;
+        const moreInfo = "https://www.ncbi.nlm.nih.gov/pubmed/?term=" + condtionName;
+
+        const row = document.createElement('tr');
+        const col1 = document.createElement('td');
+        const col2 = document.createElement('td');
+        const col3 = document.createElement('td');
+
+        const link = document.createElement('a');
+        link.innerText = "click for more info";
+        link.href = moreInfo;
+        link.target = "_blank";
+
+        col1.innerText = name;
+        col2.innerText = dateRecorded;
+        col3.append(link);
+
+        row.append(col1);
+        row.append(col2);
+        row.append(col3);
+
+        return row;
+      }
+
+      const tbody = document.createElement('tbody');
+
+      conditions.forEach(function (c) {
+        tbody.append(createRow(c.name, c.description, c.dateRecorded));
+      });
+
+      document.getElementById('p-conds').append(tbody);
+
+      makeConditionsSortable(conditions);
+    }
+
+    function makeConditionsSortable(conditions) {
+      const conditionsTable = document.querySelectorAll('#p-conds th');
+
+      conditionsTable.forEach(function(el) {
+        el.addEventListener('click', function(event) {
+          const sortType = event.target.getAttribute("data-sort");
+          if (_.isEmpty(sortType)) {return;}
+
+          // set default newConditions
+          let newConditions = conditions;
+
+          if (sortType === "condition" || sortType === "more-info") {
+            newConditions = _.sortBy(conditions, 'name');
+          } else if (sortType === "dateRecorded") {
+            newConditions = _.sortBy(conditions, 'dateRecorded');
+          }
+
+          document.querySelector('#p-conds tbody').remove();
+          insertPatientConditions(newConditions);
+        });
+      });
+
+    }
+
+    const patientId = 2;
+
+    fetchData("Patient?_id=" + patientId).then(function(patient) {
+      const patientEntry = patient.entry[0].resource; // just taking the first for this
+
+      insertPatientInfo(patientEntry);
+    });
+
+    fetchData("Condition?patient=" + patientId).then(function(patient) {
+      const conditions = patient.entry.map(function (c) {
+        return {
+          name: c.resource.code.text,
+          description: c.resource.code.coding[0].display,
+          dateRecorded: c.resource.dateRecorded || "N/A"
+        };
+      });
+
+      insertPatientConditions(conditions);
+    });
+  })();
+</script>
+
+</body>
+</html>
